@@ -9,3 +9,6 @@ Type in the number of the function you would like to perform. Here is what each 
 5. Delete record; Deletes a student record
 6. Graduation check; returns true if the student can graduate, returns leftover requirements if not
 7. Save and exit; saves and ends the program
+
+
+currently working on moving this to firebase hosting, for database instead of .csv
