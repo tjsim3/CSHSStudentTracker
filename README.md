@@ -11,4 +11,9 @@ Type in the number of the function you would like to perform. Here is what each 
 7. Save and exit; saves and ends the program
 
 
-currently working on moving this to firebase hosting, for database instead of .csv
+TO RUN (if run.bat does not work)
+Open windows powershell (shift right-click inside folder, open with windows powershell) and run this command
+java -cp ".;.\gson-2.10.1.jar" main
+
+For mac/linux use 
+java -cp ".:gson-2.10.1.jar" main
