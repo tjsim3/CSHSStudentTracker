@@ -1,13 +1,22 @@
 import java.util.ArrayList;
 import java.util.Scanner;
-import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.OutputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
 
 public class main {
     static ArrayList<StudentRecord> database = new ArrayList<>();
     static Scanner scanner = new Scanner(System.in);
+    static final String FIREBASE_URL = "https://cshsdatabase-default-rtdb.firebaseio.com/students.json";
+    static Gson gson = new Gson();
 
     public static void main(String[] args) {
-        loadFromFile("club_data.csv");  // Load saved data
+        loadFromFirebase();  // 🔥 load from Firebase instead of CSV
 
         while (true) {
             System.out.println("\n1. Add Record\n2. View Records\n3. Edit Record\n4. Search for Record\n5. Delete Record\n6. Check Graduation Requirements\n7. Save & Exit");
@@ -41,7 +50,7 @@ public class main {
                     graduationCheck();
                     break;
                 case 7:
-                    saveToFile("club_data.csv");  // Save before exit
+                    saveToFirebase();  // 🔥 save to Firebase instead of CSV
                     System.out.println("Goodbye!");
                     return;
                 default:
@@ -184,39 +193,51 @@ public class main {
         }
     }
 
-    static void saveToFile(String filename) {
-        try (PrintWriter writer = new PrintWriter(filename)) {
-            for (StudentRecord record : database) {
-                writer.println(record.getName() + "," + record.getHours() + "," +
-                        record.getCodingChallenges() + "," + record.getGuestSpeakers());
+    static void saveToFirebase() {
+        try {
+            URL url = new URL(FIREBASE_URL);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("PUT");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            String json = gson.toJson(database);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(json.getBytes());
             }
-            System.out.println("Data saved to " + filename);
+
+            conn.getInputStream().close();
+            System.out.println("Data saved to Firebase.");
         } catch (Exception e) {
-            System.out.println("Error saving file: " + e.getMessage());
+            System.out.println("Error saving to Firebase: " + e.getMessage());
         }
     }
 
-    static void loadFromFile(String filename) {
+    static void loadFromFirebase() {
         try {
-            File file = new File(filename);
-            if (!file.exists()) return; // No data to load
+            URL url = new URL(FIREBASE_URL);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
 
-            Scanner fileScanner = new Scanner(file);
-            while (fileScanner.hasNextLine()) {
-                String line = fileScanner.nextLine();
-                String[] parts = line.split(",");
-                if (parts.length == 4) {
-                    String name = parts[0];
-                    int hours = Integer.parseInt(parts[1]);
-                    int challenges = Integer.parseInt(parts[2]);
-                    int speakers = Integer.parseInt(parts[3]);
-                    database.add(new StudentRecord(name, hours, challenges, speakers));
-                }
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                response.append(line);
             }
-            fileScanner.close();
-            System.out.println("Data loaded from " + filename);
+            in.close();
+
+            String json = response.toString();
+            if (!json.equals("null")) {
+                Type listType = new TypeToken<ArrayList<StudentRecord>>(){}.getType();
+                database = gson.fromJson(json, listType);
+                System.out.println("Data loaded from Firebase.");
+            } else {
+                System.out.println("No data found in Firebase.");
+            }
         } catch (Exception e) {
-            System.out.println("Error loading file: " + e.getMessage());
+            System.out.println("Error loading from Firebase: " + e.getMessage());
         }
     }
 }
